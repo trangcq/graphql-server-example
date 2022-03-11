@@ -1,4 +1,4 @@
-const { ApolloServer, gql } = require('apollo-server');
+const { ApolloServer, gql } = require('apollo-server')
 
 // A schema is a collection of type definitions (hence "typeDefs")
 // that together define the "shape" of queries that are executed against
@@ -14,6 +14,7 @@ const typeDefs = gql`
   }
 
   type Author {
+    id: ID
     name: String
     age: Int
   }
@@ -25,6 +26,7 @@ const typeDefs = gql`
     books: [Book],
     authors: [Author],
     book(id: ID!): Book,
+    randomBook: String,
   }
 
   type Mutation {
@@ -32,17 +34,27 @@ const typeDefs = gql`
   }
 `;
 
-const data = require('./data');
+const { books, authors } = require('./data');
 
 // Resolvers define the technique for fetching the types defined in the
 // schema. This resolver retrieves books from the "books" array above.
 const resolvers = {
   Query: {
-    books: () => data.books,
-    authors: () => data.authors,
-    book(root, args, context, info) {
-      return data.books.find( book => book.id == args.id )
+    books: () => books,
+    authors: () => authors,
+    book(parent, args) {
+      logger.log("info: Getting detail book")
+      return books.find( book => book.id == args.id )
     },
+    randomBook(parent, args, context) {
+      logger.log("info: Getting random book")
+      return context.getRandomBook()
+    },
+  },
+  Book: {
+    author(parent, args) {
+      return authors.find( author => author.id == parent.authorId )
+    }
   },
   Mutation: {
     addBook(_, payload) {
@@ -51,15 +63,34 @@ const resolvers = {
         ...payload
       }
 
-      data.books.push(newBook)
+      books.push(newBook)
       return newBook
     }
   }
 };
 
+// get random book
+const getRandomBook = async () => {
+  const index =  Math.floor( Math.random() * (books.length))
+
+  return books[index].title
+}
+
+// use console log in resolvers
+const logger = {
+  log: msg => console.log(msg)
+}
+
 // The ApolloServer constructor requires two parameters: your schema
 // definition and your set of resolvers.
-const server = new ApolloServer({ typeDefs, resolvers });
+const server = new ApolloServer({ 
+  typeDefs,
+  resolvers,
+  context: {
+    getRandomBook,
+    logger,
+  }
+});
 
 // The `listen` method launches a web server.
 server.listen().then(({ url }) => {

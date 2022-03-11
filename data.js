@@ -3,36 +3,45 @@ const data = {
     {
       id: 1,
       title: 'The Awakening',
-      author: {
-        name: 'Edison',
-        age: 27
-      },
+      authorId: 1
     },
     {
       id: 2,
       title: 'City of Glass',
-      author: {
-        name: 'Andy',
-        age: 29
-      }
+      authorId: 2,
     },
     {
       id: 3,
       title: 'Secret of Naoko',
-      author: {
-        name: 'Keigo',
-        age: 59
-      }
+      authorId: 3
+    },
+    {
+      id: 4,
+      title: 'Think and grow rich',
+      authorId: 3
     },
   ],
+
   authors: [
     {
+      id: 1,
       name: 'Edison',
       age: 27
     },
     {
+      id: 2,
       name: 'Andy',
       age: 29,
+    },
+    {
+      id: 3,
+      name: 'Keigo',
+      age: 45,
+    },
+    {
+      id: 4,
+      name: 'Napoleon Hill',
+      age: 70,
     }
   ]
 }

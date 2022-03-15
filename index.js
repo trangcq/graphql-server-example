@@ -1,40 +1,7 @@
-const { ApolloServer, gql } = require('apollo-server')
-
-// A schema is a collection of type definitions (hence "typeDefs")
-// that together define the "shape" of queries that are executed against
-// your data.
-const typeDefs = gql`
-  # Comments in GraphQL strings (such as this one) start with the hash (#) symbol.
-
-  # This "Book" type defines the queryable fields for every book in our data source.
-  type Book {
-    id: ID
-    title: String
-    author: Author
-  }
-
-  type Author {
-    id: ID
-    name: String
-    age: Int
-  }
-
-  # The "Query" type is special: it lists all of the available queries that
-  # clients can execute, along with the return type for each. In this
-  # case, the "books" query returns an array of zero or more Books (defined above).
-  type Query {
-    books: [Book],
-    authors: [Author],
-    book(id: ID!): Book,
-    randomBook: String,
-  }
-
-  type Mutation {
-    addBook(title: String): Book
-  }
-`;
-
-const { books, authors } = require('./data');
+const { ApolloServer, UserInputError } = require('apollo-server')
+const { books, authors } = require('./data')
+const typeDefs = require('./typeDefs')
+const QuoteAPI  = require('./quoteApi')
 
 // Resolvers define the technique for fetching the types defined in the
 // schema. This resolver retrieves books from the "books" array above.
@@ -44,22 +11,32 @@ const resolvers = {
     authors: () => authors,
     book(parent, args) {
       logger.log("info: Getting detail book")
-      return books.find( book => book.id == args.id )
+      if (args.id < 1) {
+        throw new UserInputError('Invalid argument value', {
+          argumentName: 'id',
+        });
+      }
+
+      return books.find(book => book.id == args.id)
     },
     randomBook(parent, args, context) {
       logger.log("info: Getting random book")
       return context.getRandomBook()
     },
+    quote(parent, args, { dataSources }) {
+      logger.log("info: Getting a quote")
+      return dataSources.quoteAPI.getQuote()
+    },
   },
   Book: {
     author(parent, args) {
-      return authors.find( author => author.id == parent.authorId )
+      return authors.find(author => author.id == parent.authorId)
     }
   },
   Mutation: {
     addBook(_, payload) {
       const newBook = {
-        id: 4,
+        id: 456,
         ...payload
       }
 
@@ -71,7 +48,7 @@ const resolvers = {
 
 // get random book
 const getRandomBook = async () => {
-  const index =  Math.floor( Math.random() * (books.length))
+  const index =  Math.floor(Math.random() * (books.length))
 
   return books[index].title
 }
@@ -89,6 +66,18 @@ const server = new ApolloServer({
   context: {
     getRandomBook,
     logger,
+  },
+  dataSources: () => {
+    return {
+      quoteAPI: new QuoteAPI(),
+    }
+  },
+  formatError: (err) => {
+    if (err.extensions.code == 'GRAPHQL_VALIDATION_FAILED') {
+      return new Error('Validate failed!');
+    }
+
+    return err
   }
 });
 
